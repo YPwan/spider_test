@@ -3,6 +3,8 @@
 import requests
 import urllib
 import json
+import time
+import os
 from bs4 import BeautifulSoup
 
 
@@ -14,9 +16,13 @@ def get_html(keywords):
         'accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3'
     }
     url = "https://www.baidu.com/s?wd="+ keywords
-    r = requests.get(url=url,headers=headers)
+    r = requests.get(url=url,timeout=30 ,headers=headers)
     r.encoding = "utf-8"
-    return r.text
+    if(r.status_code == 404):
+        returnInfo = False
+    else:
+        returnInfo = r.text
+    return returnInfo
 
 def get_info(html_code):
     soup = BeautifulSoup(html_code,'html.parser')
@@ -40,8 +46,28 @@ def get_file_content(file):
     contentArr = str.split()
     return contentArr
 
-def save_txt(content):
-    res = open('result.txt','a+',encoding='utf-8')
+
+def mkdir(path):
+
+    # 去除首位空格
+    path = path.strip()
+    # 去除尾部 \ 符号
+    path = path.rstrip("\\")
+
+    # 判断路径是否存在
+    # 存在     True
+    # 不存在   False
+    isExists = os.path.exists(path)
+
+    # 判断结果
+    if not isExists:
+        # 如果不存在则创建目录
+        # 创建目录操作函数
+        os.makedirs(path)
+
+
+def save_txt(content,filename):
+    res = open(filename + '.txt','a+',encoding='utf-8')
     save_content = ''
     for text in content :
         save_content += '标题：'+ text["title"]
@@ -64,17 +90,25 @@ def base():
         for keywords in keywordsArr:
             check_url = f'site%3A{url}%20{keywords}'
             html = get_html(check_url)
-            # print(html)
-            # exit()
-            info = get_info(html)
-            # print(info)
-            # print(info)
-            # exit()
-            if info:
-                save_txt(info)
-            else :
+            nowtime = time.strftime('%Y%m%d', time.localtime(time.time()))
+            path = 'result/'+ nowtime + '/' + keywords + '/'
+            mkdir(path)
+            if(html):
+                info = get_info(html)
+                newInfo = []
+                if info:
+                    for text in info:
+                        target = 'http://www.e23.cn/404/404.html'
+                        if (target not in text):
+                            newInfo.append(text)
+                    if len(newInfo):
+                        save_txt(newInfo, path + url)
+                else:
+                    continue
+            else:
                 continue
-            # print(info)
+    print('ok!')
+
 
 
 
